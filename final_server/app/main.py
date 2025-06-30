@@ -38,7 +38,7 @@ def get_db():
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
-    with open(os.path.join(STATIC_DIR, "index.html")) as f:
+    with open(os.path.join(STATIC_DIR, "index.html"), encoding='utf-8') as f:
         return HTMLResponse(content=f.read(), status_code=200)
 
 @app.post("/readings/", response_model=schemas.SensorReading)

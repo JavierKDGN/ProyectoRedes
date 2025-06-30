@@ -2,9 +2,586 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Data Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #0d1b2a 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+        }
+
+        .header {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(15px);
+            padding: 1rem 2rem;
+            box-shadow: 0 4px 30px rgba(59, 130, 246, 0.15);
+            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .header h1 {
+            color: #f1f5f9;
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 300;
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .header p {
+            text-align: center;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: rgba(59, 130, 246, 0.15);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            color: #e2e8f0;
+            padding: 0.7rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            background: rgba(59, 130, 246, 0.25);
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn.active {
+            background: rgba(59, 130, 246, 0.8);
+            border-color: #3b82f6;
+            color: #ffffff;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 0 12px 40px rgba(59, 130, 246, 0.15);
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .temperature-icon {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+
+        .pressure-icon {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .humidity-icon {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .chart-container {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .chart-title {
+            font-size: 1.5rem;
+            color: #f1f5f9;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            color: #e2e8f0;
+            font-size: 1.2rem;
+        }
+
+        .spinner {
+            border: 3px solid rgba(59, 130, 246, 0.3);
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin-right: 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #fecaca;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .data-table {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        th {
+            background: rgba(59, 130, 246, 0.1);
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        td {
+            color: #e2e8f0;
+        }
+
+        tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .refresh-info {
+            text-align: center;
+            color: rgba(148, 163, 184, 0.8);
+            margin-top: 2rem;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .chart-wrapper {
+                height: 300px;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div class="header">
+        <h1>🌡️ Sensor Data Dashboard</h1>
+        <p>Real-time monitoring of temperature, pressure, and humidity sensors</p>
+    </div>
 
+    <div class="controls">
+        <button class="btn active" onclick="setTimeRange('1h')" id="btn-1h">Last Hour</button>
+        <button class="btn" onclick="setTimeRange('6h')" id="btn-6h">Last 6 Hours</button>
+        <button class="btn" onclick="setTimeRange('24h')" id="btn-24h">Last 24 Hours</button>
+        <button class="btn" onclick="setTimeRange('all')" id="btn-all">All Data</button>
+        <button class="btn" onclick="refreshData()">🔄 Refresh</button>
+    </div>
+
+    <div class="dashboard">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon temperature-icon">🌡️</div>
+                    <div>
+                        <div class="stat-value" id="temp-value">--</div>
+                        <div class="stat-label">Temperature (°C)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon pressure-icon">⏲️</div>
+                    <div>
+                        <div class="stat-value" id="pressure-value">--</div>
+                        <div class="stat-label">Pressure (hPa)</div>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon humidity-icon">💧</div>
+                    <div>
+                        <div class="stat-value" id="humidity-value">--</div>
+                        <div class="stat-label">Humidity (%)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">📊 Sensor Readings Over Time</div>
+            <div class="chart-wrapper">
+                <canvas id="mainChart"></canvas>
+            </div>
+        </div>
+
+        <div class="data-table">
+            <h3 style="margin-bottom: 1rem; color: #2c3e50;">�� Recent Readings</h3>
+            <div id="tableContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading data...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="refresh-info">
+        Data updates automatically every 30 seconds
+    </div>
+
+    <script>
+        let currentTimeRange = '1h';
+        let chart = null;
+        let updateInterval = null;
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeChart();
+            loadData();
+
+            // Set up auto-refresh
+            updateInterval = setInterval(loadData, 30000); // Refresh every 30 seconds
+        });
+
+        function initializeChart() {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: [],
+                        borderColor: '#ff6b6b',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        tension: 0.4,
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Pressure (hPa)',
+                        data: [],
+                        borderColor: '#74b9ff',
+                        backgroundColor: 'rgba(116, 185, 255, 0.1)',
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }, {
+                        label: 'Humidity (%)',
+                        data: [],
+                        borderColor: '#55a3ff',
+                        backgroundColor: 'rgba(85, 163, 255, 0.1)',
+                        tension: 0.4,
+                        yAxisID: 'y2'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Temperature (°C)',
+                                color: '#ff6b6b'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Pressure (hPa)',
+                                color: '#74b9ff'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        },
+                        y2: {
+                            type: 'linear',
+                            display: false,
+                            position: 'right',
+                        }
+                    },
+                }
+            });
+        }
+
+        async function loadData() {
+            try {
+                const response = await fetch('/readings/?limit=1000');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.length === 0) {
+                    showNoDataMessage();
+                    return;
+                }
+
+                const filteredData = filterDataByTimeRange(data, currentTimeRange);
+                updateChart(filteredData);
+                updateStats(filteredData);
+                updateTable(data.slice(0, 20)); // Show last 20 readings in table
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showError('Failed to load sensor data. Please check your connection.');
+            }
+        }
+
+        function filterDataByTimeRange(data, range) {
+            if (range === 'all') return data;
+
+            const now = new Date();
+            const cutoff = new Date();
+
+            switch (range) {
+                case '1h':
+                    cutoff.setHours(now.getHours() - 1);
+                    break;
+                case '6h':
+                    cutoff.setHours(now.getHours() - 6);
+                    break;
+                case '24h':
+                    cutoff.setDate(now.getDate() - 1);
+                    break;
+            }
+
+            return data.filter(reading => new Date(reading.timestamp) >= cutoff);
+        }
+
+        function updateChart(data) {
+            const labels = data.map(reading => {
+                const date = new Date(reading.timestamp);
+                return date.toLocaleTimeString();
+            });
+
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = data.map(reading => reading.temperature);
+            chart.data.datasets[1].data = data.map(reading => reading.pressure);
+            chart.data.datasets[2].data = data.map(reading => reading.humidity);
+
+            chart.update('none');
+        }
+
+        function updateStats(data) {
+            if (data.length === 0) return;
+
+            const latest = data[data.length - 1];
+
+            document.getElementById('temp-value').textContent = latest.temperature.toFixed(1);
+            document.getElementById('pressure-value').textContent = latest.pressure.toFixed(1);
+            document.getElementById('humidity-value').textContent = latest.humidity.toFixed(1);
+        }
+
+        function updateTable(data) {
+            const container = document.getElementById('tableContainer');
+
+            if (data.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #7f8c8d;">No data available</p>';
+                return;
+            }
+
+            const table = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sensor ID</th>
+                            <th>Timestamp</th>
+                            <th>Temperature (°C)</th>
+                            <th>Pressure (hPa)</th>
+                            <th>Humidity (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(reading => `
+                            <tr>
+                                <td>${reading.sensor_id}</td>
+                                <td>${new Date(reading.timestamp).toLocaleString()}</td>
+                                <td>${reading.temperature.toFixed(1)}</td>
+                                <td>${reading.pressure.toFixed(1)}</td>
+                                <td>${reading.humidity.toFixed(1)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = table;
+        }
+
+        function setTimeRange(range) {
+            currentTimeRange = range;
+
+            // Update button states
+            document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${range}`).classList.add('active');
+
+            loadData();
+        }
+
+        function refreshData() {
+            loadData();
+        }
+
+        function showError(message) {
+            document.getElementById('tableContainer').innerHTML = `
+                <div class="error">
+                    ⚠️ ${message}
+                </div>
+            `;
+        }
+
+        function showNoDataMessage() {
+            document.getElementById('tableContainer').innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: #7f8c8d;">
+                    📊 No sensor data available yet. Start sending readings to see visualizations!
+                </div>
+            `;
+        }
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+        });
+    </script>
 </body>
 </html>
