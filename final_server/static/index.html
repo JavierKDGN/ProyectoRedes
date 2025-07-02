@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sensor Data Dashboard</title>
+    <title>Panel de Datos de Sensores</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
     <style>
@@ -104,6 +104,17 @@
             transform: translateY(-5px);
             border-color: rgba(59, 130, 246, 0.4);
             box-shadow: 0 12px 40px rgba(59, 130, 246, 0.15);
+        }
+
+        .stat-card.selected {
+            border-color: #3b82f6;
+            box-shadow: 0 0 20px #3b82f6aa;
+            background: rgba(59, 130, 246, 0.15);
+            transition: all 0.2s;
+        }
+
+        .stat-card {
+            cursor: pointer;
         }
 
         .stat-header {
@@ -253,6 +264,116 @@
             font-size: 0.9rem;
         }
 
+        .filters {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem auto 2rem auto;
+            max-width: 1400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 150px;
+        }
+
+        .filter-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .filter-input, .filter-select {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #e2e8f0;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .filter-input:focus, .filter-select:focus {
+            outline: none;
+            border-color: rgba(59, 130, 246, 0.6);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .filter-input::placeholder {
+            color: rgba(148, 163, 184, 0.7);
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .filter-btn {
+            background: rgba(34, 197, 94, 0.15);
+            border: 2px solid rgba(34, 197, 94, 0.3);
+            color: #e2e8f0;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .filter-btn:hover {
+            background: rgba(34, 197, 94, 0.25);
+            border-color: rgba(34, 197, 94, 0.5);
+        }
+
+        .clear-btn {
+            background: rgba(239, 68, 68, 0.15);
+            border: 2px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .clear-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        .active-filters {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .filter-tag {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            color: #e2e8f0;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-tag .remove {
+            cursor: pointer;
+            font-weight: bold;
+        }
+
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 2rem;
@@ -266,176 +387,264 @@
             .chart-wrapper {
                 height: 300px;
             }
+
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-group {
+                min-width: auto;
+            }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🌡️ Sensor Data Dashboard</h1>
-        <p>Real-time monitoring of temperature, pressure, and humidity sensors</p>
+        <h1>🌡️ Panel de Datos de Sensores</h1>
+        <p>Monitoreo en tiempo real de sensores de temperatura, presión y humedad</p>
     </div>
 
     <div class="controls">
-        <button class="btn active" onclick="setTimeRange('1h')" id="btn-1h">Last Hour</button>
-        <button class="btn" onclick="setTimeRange('6h')" id="btn-6h">Last 6 Hours</button>
-        <button class="btn" onclick="setTimeRange('24h')" id="btn-24h">Last 24 Hours</button>
-        <button class="btn" onclick="setTimeRange('all')" id="btn-all">All Data</button>
-        <button class="btn" onclick="refreshData()">🔄 Refresh</button>
+        <button class="btn active" onclick="setTimeRange('1h')" id="btn-1h">Última hora</button>
+        <button class="btn" onclick="setTimeRange('6h')" id="btn-6h">Últimas 6 horas</button>
+        <button class="btn" onclick="setTimeRange('24h')" id="btn-24h">Últimas 24 horas</button>
+        <button class="btn" onclick="setTimeRange('all')" id="btn-all">Todos los datos</button>
+        <button class="btn" onclick="refreshData()">🔄 Refrescar</button>
+    </div>
+
+    <div class="filters">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label class="filter-label" for="sensor-id">ID Sensor</label>
+                <input class="filter-input" type="text" id="sensor-id" placeholder="Filtrar por ID">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="date-from">Fecha Desde</label>
+                <input class="filter-input" type="date" id="date-from">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="date-to">Fecha Hasta</label>
+                <input class="filter-input" type="date" id="date-to">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Temperatura (°C)</label>
+                <div style="display: flex; gap: 0.25rem;">
+                    <input class="filter-input" type="number" id="min-temp" placeholder="Min" style="width: 70px;">
+                    <input class="filter-input" type="number" id="max-temp" placeholder="Max" style="width: 70px;">
+                </div>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Presión (hPa)</label>
+                <div style="display: flex; gap: 0.25rem;">
+                    <input class="filter-input" type="number" id="min-pressure" placeholder="Min" style="width: 70px;">
+                    <input class="filter-input" type="number" id="max-pressure" placeholder="Max" style="width: 70px;">
+                </div>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Humedad (%)</label>
+                <div style="display: flex; gap: 0.25rem;">
+                    <input class="filter-input" type="number" id="min-humidity" placeholder="Min" style="width: 70px;">
+                    <input class="filter-input" type="number" id="max-humidity" placeholder="Max" style="width: 70px;">
+                </div>
+            </div>
+        </div>
+        <div class="filter-actions">
+            <button class="filter-btn" onclick="applyFilters()">🔍 Aplicar Filtros</button>
+            <button class="filter-btn clear-btn" onclick="clearFilters()">🗑️ Limpiar</button>
+        </div>
+        <div class="active-filters" id="activeFiltersContainer" style="display: none;">
+            <!-- Active filters will be displayed here -->
+        </div>
     </div>
 
     <div class="dashboard">
         <div class="stats-grid">
-            <div class="stat-card">
+            <div class="stat-card stat-card-temp" onclick="showChart('temperature')">
                 <div class="stat-header">
                     <div class="stat-icon temperature-icon">🌡️</div>
                     <div>
                         <div class="stat-value" id="temp-value">--</div>
-                        <div class="stat-label">Temperature (°C)</div>
+                        <div class="stat-label">Temperatura (°C)</div>
                     </div>
                 </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card stat-card-pressure" onclick="showChart('pressure')">
                 <div class="stat-header">
                     <div class="stat-icon pressure-icon">⏲️</div>
                     <div>
                         <div class="stat-value" id="pressure-value">--</div>
-                        <div class="stat-label">Pressure (hPa)</div>
+                        <div class="stat-label">Presión (hPa)</div>
                     </div>
                 </div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card stat-card-humidity" onclick="showChart('humidity')">
                 <div class="stat-header">
                     <div class="stat-icon humidity-icon">💧</div>
                     <div>
                         <div class="stat-value" id="humidity-value">--</div>
-                        <div class="stat-label">Humidity (%)</div>
+                        <div class="stat-label">Humedad (%)</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="chart-container">
-            <div class="chart-title">📊 Sensor Readings Over Time</div>
+        <!-- Only one chart visible at a time -->
+        <div class="chart-container" id="temperatureChartContainer">
+            <div class="chart-title">🌡️ Temperatura en el Tiempo</div>
             <div class="chart-wrapper">
-                <canvas id="mainChart"></canvas>
+                <canvas id="temperatureChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-container" id="pressureChartContainer" style="display:none;">
+            <div class="chart-title">⏲️ Presión en el Tiempo</div>
+            <div class="chart-wrapper">
+                <canvas id="pressureChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-container" id="humidityChartContainer" style="display:none;">
+            <div class="chart-title">💧 Humedad en el Tiempo</div>
+            <div class="chart-wrapper">
+                <canvas id="humidityChart"></canvas>
             </div>
         </div>
 
         <div class="data-table">
-            <h3 style="margin-bottom: 1rem; color: #2c3e50;">�� Recent Readings</h3>
+            <h3 style="margin-bottom: 1rem; color: #2c3e50;">📋 Lecturas Recientes</h3>
             <div id="tableContainer">
                 <div class="loading">
                     <div class="spinner"></div>
-                    Loading data...
+                    Cargando datos...
                 </div>
             </div>
         </div>
     </div>
 
     <div class="refresh-info">
-        Data updates automatically every 30 seconds
+        Los datos se actualizan automáticamente cada 30 segundos
     </div>
 
     <script>
         let currentTimeRange = '1h';
-        let chart = null;
+        let temperatureChart = null;
+        let pressureChart = null;
+        let humidityChart = null;
         let updateInterval = null;
+        let allReadings = []; // Store all readings for client-side filtering
+        let currentFilters = {}; // Store current filter values
+        let currentChart = 'temperature';
 
         // Initialize the dashboard
         document.addEventListener('DOMContentLoaded', function() {
-            initializeChart();
+            initializeCharts();
             loadData();
+            setSelectedStatCard('temperature');
+            showChart('temperature');
 
             // Set up auto-refresh
             updateInterval = setInterval(loadData, 30000); // Refresh every 30 seconds
         });
 
-        function initializeChart() {
-            const ctx = document.getElementById('mainChart').getContext('2d');
-
-            chart = new Chart(ctx, {
+        function initializeCharts() {
+            // Temperature chart
+            const tempCtx = document.getElementById('temperatureChart').getContext('2d');
+            temperatureChart = new Chart(tempCtx, {
                 type: 'line',
                 data: {
                     labels: [],
                     datasets: [{
-                        label: 'Temperature (°C)',
+                        label: 'Temperatura (°C)',
                         data: [],
                         borderColor: '#ff6b6b',
                         backgroundColor: 'rgba(255, 107, 107, 0.1)',
                         tension: 0.4,
-                        yAxisID: 'y'
-                    }, {
-                        label: 'Pressure (hPa)',
-                        data: [],
-                        borderColor: '#74b9ff',
-                        backgroundColor: 'rgba(116, 185, 255, 0.1)',
-                        tension: 0.4,
-                        yAxisID: 'y1'
-                    }, {
-                        label: 'Humidity (%)',
-                        data: [],
-                        borderColor: '#55a3ff',
-                        backgroundColor: 'rgba(85, 163, 255, 0.1)',
-                        tension: 0.4,
-                        yAxisID: 'y2'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false,
-                    },
                     plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                        }
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
                     },
                     scales: {
                         x: {
                             display: true,
-                            title: {
-                                display: true,
-                                text: 'Time'
-                            }
+                            title: { display: true, text: 'Hora' }
                         },
                         y: {
-                            type: 'linear',
                             display: true,
-                            position: 'left',
-                            title: {
-                                display: true,
-                                text: 'Temperature (°C)',
-                                color: '#ff6b6b'
-                            },
-                            grid: {
-                                drawOnChartArea: false,
-                            },
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            title: {
-                                display: true,
-                                text: 'Pressure (hPa)',
-                                color: '#74b9ff'
-                            },
-                            grid: {
-                                drawOnChartArea: false,
-                            },
-                        },
-                        y2: {
-                            type: 'linear',
-                            display: false,
-                            position: 'right',
+                            title: { display: true, text: 'Temperatura (°C)', color: '#ff6b6b' }
                         }
+                    }
+                }
+            });
+
+            // Pressure chart
+            const pressureCtx = document.getElementById('pressureChart').getContext('2d');
+            pressureChart = new Chart(pressureCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Presión (hPa)',
+                        data: [],
+                        borderColor: '#74b9ff',
+                        backgroundColor: 'rgba(116, 185, 255, 0.1)',
+                        tension: 0.4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
                     },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: { display: true, text: 'Hora' }
+                        },
+                        y: {
+                            display: true,
+                            title: { display: true, text: 'Presión (hPa)', color: '#74b9ff' }
+                        }
+                    }
+                }
+            });
+
+            // Humidity chart
+            const humidityCtx = document.getElementById('humidityChart').getContext('2d');
+            humidityChart = new Chart(humidityCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Humedad (%)',
+                        data: [],
+                        borderColor: '#55a3ff',
+                        backgroundColor: 'rgba(85, 163, 255, 0.1)',
+                        tension: 0.4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: { display: true, text: 'Hora' }
+                        },
+                        y: {
+                            display: true,
+                            title: { display: true, text: 'Humedad (%)', color: '#55a3ff' }
+                        }
+                    }
                 }
             });
         }
@@ -448,21 +657,82 @@
                 }
 
                 const data = await response.json();
+                allReadings = data; // Store all readings
 
                 if (data.length === 0) {
                     showNoDataMessage();
                     return;
                 }
 
-                const filteredData = filterDataByTimeRange(data, currentTimeRange);
-                updateChart(filteredData);
+                // Apply current filters and time range
+                const filteredData = applyAllFilters(data);
+                updateCharts(filteredData);
                 updateStats(filteredData);
-                updateTable(data.slice(0, 20)); // Show last 20 readings in table
+                updateTable(filteredData.slice(0, 50)); // Show first 50 filtered readings
 
             } catch (error) {
                 console.error('Error loading data:', error);
                 showError('Failed to load sensor data. Please check your connection.');
             }
+        }
+
+        function applyAllFilters(data) {
+            let filtered = [...data];
+
+            // Apply time range filter
+            filtered = filterDataByTimeRange(filtered, currentTimeRange);
+
+            // Apply custom filters
+            filtered = applyCustomFilters(filtered, currentFilters);
+
+            return filtered;
+        }
+
+        function applyCustomFilters(data, filters) {
+            return data.filter(reading => {
+                // Filter by sensor ID
+                if (filters.sensorId && reading.sensor_id.toString() !== filters.sensorId) {
+                    return false;
+                }
+
+                // Filter by date range
+                const readingDate = new Date(reading.timestamp);
+                if (filters.dateFrom) {
+                    const fromDate = new Date(filters.dateFrom);
+                    if (readingDate < fromDate) return false;
+                }
+                if (filters.dateTo) {
+                    const toDate = new Date(filters.dateTo);
+                    toDate.setHours(23, 59, 59, 999); // Include the entire day
+                    if (readingDate > toDate) return false;
+                }
+
+                // Filter by temperature range
+                if (filters.minTemp !== undefined && reading.temperature < filters.minTemp) {
+                    return false;
+                }
+                if (filters.maxTemp !== undefined && reading.temperature > filters.maxTemp) {
+                    return false;
+                }
+
+                // Filter by pressure range
+                if (filters.minPressure !== undefined && reading.pressure < filters.minPressure) {
+                    return false;
+                }
+                if (filters.maxPressure !== undefined && reading.pressure > filters.maxPressure) {
+                    return false;
+                }
+
+                // Filter by humidity range
+                if (filters.minHumidity !== undefined && reading.humidity < filters.minHumidity) {
+                    return false;
+                }
+                if (filters.maxHumidity !== undefined && reading.humidity > filters.maxHumidity) {
+                    return false;
+                }
+
+                return true;
+            });
         }
 
         function filterDataByTimeRange(data, range) {
@@ -486,22 +756,35 @@
             return data.filter(reading => new Date(reading.timestamp) >= cutoff);
         }
 
-        function updateChart(data) {
+        function updateCharts(data) {
             const labels = data.map(reading => {
                 const date = new Date(reading.timestamp);
                 return date.toLocaleTimeString();
             });
 
-            chart.data.labels = labels;
-            chart.data.datasets[0].data = data.map(reading => reading.temperature);
-            chart.data.datasets[1].data = data.map(reading => reading.pressure);
-            chart.data.datasets[2].data = data.map(reading => reading.humidity);
+            // Update temperature chart
+            temperatureChart.data.labels = labels;
+            temperatureChart.data.datasets[0].data = data.map(reading => reading.temperature);
+            temperatureChart.update('none');
 
-            chart.update('none');
+            // Update pressure chart
+            pressureChart.data.labels = labels;
+            pressureChart.data.datasets[0].data = data.map(reading => reading.pressure);
+            pressureChart.update('none');
+
+            // Update humidity chart
+            humidityChart.data.labels = labels;
+            humidityChart.data.datasets[0].data = data.map(reading => reading.humidity);
+            humidityChart.update('none');
         }
 
         function updateStats(data) {
-            if (data.length === 0) return;
+            if (data.length === 0) {
+                document.getElementById('temp-value').textContent = '--';
+                document.getElementById('pressure-value').textContent = '--';
+                document.getElementById('humidity-value').textContent = '--';
+                return;
+            }
 
             const latest = data[data.length - 1];
 
@@ -514,19 +797,22 @@
             const container = document.getElementById('tableContainer');
 
             if (data.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #7f8c8d;">No data available</p>';
+                container.innerHTML = '<p style="text-align: center; color: #7f8c8d;">No hay datos disponibles con los filtros aplicados</p>';
                 return;
             }
 
             const table = `
+                <div style="margin-bottom: 1rem; color: #94a3b8; text-align: center;">
+                    Mostrando ${data.length} de ${allReadings.length} lecturas
+                </div>
                 <table>
                     <thead>
                         <tr>
-                            <th>Sensor ID</th>
-                            <th>Timestamp</th>
-                            <th>Temperature (°C)</th>
-                            <th>Pressure (hPa)</th>
-                            <th>Humidity (%)</th>
+                            <th>ID Sensor</th>
+                            <th>Fecha y Hora</th>
+                            <th>Temperatura (°C)</th>
+                            <th>Presión (hPa)</th>
+                            <th>Humedad (%)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -553,7 +839,13 @@
             document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`btn-${range}`).classList.add('active');
 
-            loadData();
+            // Reapply filters with new time range
+            if (allReadings.length > 0) {
+                const filteredData = applyAllFilters(allReadings);
+                updateCharts(filteredData);
+                updateStats(filteredData);
+                updateTable(filteredData.slice(0, 50));
+            }
         }
 
         function refreshData() {
@@ -571,9 +863,163 @@
         function showNoDataMessage() {
             document.getElementById('tableContainer').innerHTML = `
                 <div style="text-align: center; padding: 2rem; color: #7f8c8d;">
-                    📊 No sensor data available yet. Start sending readings to see visualizations!
+                    📊 Aún no hay datos de sensores. ¡Comienza a enviar lecturas para ver las visualizaciones!
                 </div>
             `;
+        }
+
+        function applyFilters() {
+            // Get filter values from inputs
+            const sensorId = document.getElementById('sensor-id').value.trim();
+            const dateFrom = document.getElementById('date-from').value;
+            const dateTo = document.getElementById('date-to').value;
+            const minTemp = document.getElementById('min-temp').value;
+            const maxTemp = document.getElementById('max-temp').value;
+            const minPressure = document.getElementById('min-pressure').value;
+            const maxPressure = document.getElementById('max-pressure').value;
+            const minHumidity = document.getElementById('min-humidity').value;
+            const maxHumidity = document.getElementById('max-humidity').value;
+
+            // Build the filter object
+            currentFilters = {};
+            if (sensorId) currentFilters.sensorId = sensorId;
+            if (dateFrom) currentFilters.dateFrom = dateFrom;
+            if (dateTo) currentFilters.dateTo = dateTo;
+            if (minTemp) currentFilters.minTemp = parseFloat(minTemp);
+            if (maxTemp) currentFilters.maxTemp = parseFloat(maxTemp);
+            if (minPressure) currentFilters.minPressure = parseFloat(minPressure);
+            if (maxPressure) currentFilters.maxPressure = parseFloat(maxPressure);
+            if (minHumidity) currentFilters.minHumidity = parseFloat(minHumidity);
+            if (maxHumidity) currentFilters.maxHumidity = parseFloat(maxHumidity);
+
+            // Apply filters to current data
+            const filteredData = applyAllFilters(allReadings);
+            updateCharts(filteredData);
+            updateStats(filteredData);
+            updateTable(filteredData.slice(0, 50));
+
+            // Show active filters
+            updateActiveFiltersDisplay();
+        }
+
+        function clearFilters() {
+            // Clear all filter inputs
+            document.getElementById('sensor-id').value = '';
+            document.getElementById('date-from').value = '';
+            document.getElementById('date-to').value = '';
+            document.getElementById('min-temp').value = '';
+            document.getElementById('max-temp').value = '';
+            document.getElementById('min-pressure').value = '';
+            document.getElementById('max-pressure').value = '';
+            document.getElementById('min-humidity').value = '';
+            document.getElementById('max-humidity').value = '';
+
+            // Clear current filters
+            currentFilters = {};
+
+            // Reapply only time range filter
+            const filteredData = applyAllFilters(allReadings);
+            updateCharts(filteredData);
+            updateStats(filteredData);
+            updateTable(filteredData.slice(0, 50));
+
+            // Hide active filters display
+            document.getElementById('activeFiltersContainer').style.display = 'none';
+        }
+
+        function updateActiveFiltersDisplay() {
+            const container = document.getElementById('activeFiltersContainer');
+            const filterKeys = Object.keys(currentFilters);
+
+            if (filterKeys.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            const filterTags = filterKeys.map(key => {
+                let displayText = '';
+                const value = currentFilters[key];
+
+                switch (key) {
+                    case 'sensorId':
+                        displayText = `Sensor: ${value}`;
+                        break;
+                    case 'dateFrom':
+                        displayText = `Desde: ${value}`;
+                        break;
+                    case 'dateTo':
+                        displayText = `Hasta: ${value}`;
+                        break;
+                    case 'minTemp':
+                        displayText = `Temp ≥ ${value}°C`;
+                        break;
+                    case 'maxTemp':
+                        displayText = `Temp ≤ ${value}°C`;
+                        break;
+                    case 'minPressure':
+                        displayText = `Presión ≥ ${value} hPa`;
+                        break;
+                    case 'maxPressure':
+                        displayText = `Presión ≤ ${value} hPa`;
+                        break;
+                    case 'minHumidity':
+                        displayText = `Humedad ≥ ${value}%`;
+                        break;
+                    case 'maxHumidity':
+                        displayText = `Humedad ≤ ${value}%`;
+                        break;
+                }
+
+                return `<div class="filter-tag">${displayText} <span class="remove" onclick="removeFilter('${key}')">×</span></div>`;
+            }).join('');
+
+            container.innerHTML = filterTags;
+            container.style.display = 'flex';
+        }
+
+        function removeFilter(filterKey) {
+            delete currentFilters[filterKey];
+
+            // Clear the corresponding input
+            const inputMap = {
+                'sensorId': 'sensor-id',
+                'dateFrom': 'date-from',
+                'dateTo': 'date-to',
+                'minTemp': 'min-temp',
+                'maxTemp': 'max-temp',
+                'minPressure': 'min-pressure',
+                'maxPressure': 'max-pressure',
+                'minHumidity': 'min-humidity',
+                'maxHumidity': 'max-humidity'
+            };
+
+            const inputId = inputMap[filterKey];
+            if (inputId) {
+                document.getElementById(inputId).value = '';
+            }
+
+            // Reapply filters
+            const filteredData = applyAllFilters(allReadings);
+            updateCharts(filteredData);
+            updateStats(filteredData);
+            updateTable(filteredData.slice(0, 50));
+
+            // Update display
+            updateActiveFiltersDisplay();
+        }
+
+        function showChart(type) {
+            document.getElementById('temperatureChartContainer').style.display = (type === 'temperature') ? '' : 'none';
+            document.getElementById('pressureChartContainer').style.display = (type === 'pressure') ? '' : 'none';
+            document.getElementById('humidityChartContainer').style.display = (type === 'humidity') ? '' : 'none';
+            setSelectedStatCard(type);
+            currentChart = type;
+        }
+
+        function setSelectedStatCard(type) {
+            document.querySelector('.stat-card-temp').classList.toggle('selected', type === 'temperature');
+            document.querySelector('.stat-card-pressure').classList.toggle('selected', type === 'pressure');
+            document.querySelector('.stat-card-humidity').classList.toggle('selected', type === 'humidity');
         }
 
         // Clean up on page unload
