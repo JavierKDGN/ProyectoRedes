@@ -537,12 +537,12 @@
         // Initialize the dashboard
         document.addEventListener('DOMContentLoaded', function() {
             initializeCharts();
-            loadData();
+            // Don't load data automatically - wait for user to select a sensor
+            showEmptyStateMessage();
             setSelectedStatCard('temperature');
             showChart('temperature');
 
-            // Set up auto-refresh
-            updateInterval = setInterval(loadData, 30000); // Refresh every 30 seconds
+            // Don't set up auto-refresh initially - only after a sensor is selected
         });
 
         function initializeCharts() {
@@ -598,22 +598,21 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'top' },
-                        tooltip: { mode: 'index', intersect: false }
+                        legend: {position: 'top'},
+                        tooltip: {mode: 'index', intersect: false}
                     },
                     scales: {
                         x: {
                             display: true,
-                            title: { display: true, text: 'Hora' }
+                            title: {display: true, text: 'Hora'}
                         },
                         y: {
                             display: true,
-                            title: { display: true, text: 'Presión (hPa)', color: '#74b9ff' }
+                            title: {display: true, text: 'Presión (hPa)', color: '#74b9ff'}
                         }
                     }
                 }
             });
-
             // Humidity chart
             const humidityCtx = document.getElementById('humidityChart').getContext('2d');
             humidityChart = new Chart(humidityCtx, {
@@ -632,43 +631,72 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'top' },
-                        tooltip: { mode: 'index', intersect: false }
+                        legend: {position: 'top'},
+                        tooltip: {mode: 'index', intersect: false}
                     },
                     scales: {
                         x: {
                             display: true,
-                            title: { display: true, text: 'Hora' }
+                            title: {display: true, text: 'Hora'}
                         },
                         y: {
                             display: true,
-                            title: { display: true, text: 'Humedad (%)', color: '#55a3ff' }
+                            title: {display: true, text: 'Humedad (%)', color: '#55a3ff'}
                         }
                     }
                 }
             });
+
         }
 
-        async function loadData() {
+        async function loadData(filters = null) {
             try {
-                const response = await fetch('/readings/?limit=1000');
+                let url = '/readings/?limit=1000';
+
+                // If no filters provided or no sensor_id, don't fetch data
+                if (!filters || !filters.sensorId) {
+                    clearAllCharts();
+                    showEmptyStateMessage();
+                    return;
+                }
+
+                // Build query parameters for server-side filtering
+                const params = new URLSearchParams();
+                params.append('limit', '1000');
+
+                if (filters.sensorId) {
+                    params.append('sensor_id', filters.sensorId);
+                }
+                if (filters.dateFrom) {
+                    params.append('start_date', filters.dateFrom);
+                }
+                if (filters.dateTo) {
+                    params.append('end_date', filters.dateTo);
+                }
+
+                url = `/readings/?${params.toString()}`;
+
+                const response = await fetch(url);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const data = await response.json();
-                allReadings = data; // Store all readings
 
                 if (data.length === 0) {
                     showNoDataMessage();
                     return;
                 }
 
-                // Apply current filters and time range
-                const filteredData = applyAllFilters(data);
-                updateCharts(filteredData);
-                updateStats(filteredData);
-                updateTable(filteredData.slice(0, 50)); // Show first 50 filtered readings
+                // Apply time range filter (client-side for now)
+                const filteredData = filterDataByTimeRange(data, currentTimeRange);
+
+                // Apply additional client-side filters (temperature, pressure, humidity ranges)
+                const finalData = applyAdditionalFilters(filteredData, filters);
+
+                updateCharts(finalData);
+                updateStats(finalData);
+                updateTable(finalData.slice(0, 50));
 
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -676,37 +704,8 @@
             }
         }
 
-        function applyAllFilters(data) {
-            let filtered = [...data];
-
-            // Apply time range filter
-            filtered = filterDataByTimeRange(filtered, currentTimeRange);
-
-            // Apply custom filters
-            filtered = applyCustomFilters(filtered, currentFilters);
-
-            return filtered;
-        }
-
-        function applyCustomFilters(data, filters) {
+        function applyAdditionalFilters(data, filters) {
             return data.filter(reading => {
-                // Filter by sensor ID
-                if (filters.sensorId && reading.sensor_id.toString() !== filters.sensorId) {
-                    return false;
-                }
-
-                // Filter by date range
-                const readingDate = new Date(reading.timestamp);
-                if (filters.dateFrom) {
-                    const fromDate = new Date(filters.dateFrom);
-                    if (readingDate < fromDate) return false;
-                }
-                if (filters.dateTo) {
-                    const toDate = new Date(filters.dateTo);
-                    toDate.setHours(23, 59, 59, 999); // Include the entire day
-                    if (readingDate > toDate) return false;
-                }
-
                 // Filter by temperature range
                 if (filters.minTemp !== undefined && reading.temperature < filters.minTemp) {
                     return false;
@@ -839,17 +838,52 @@
             document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`btn-${range}`).classList.add('active');
 
-            // Reapply filters with new time range
-            if (allReadings.length > 0) {
-                const filteredData = applyAllFilters(allReadings);
-                updateCharts(filteredData);
-                updateStats(filteredData);
-                updateTable(filteredData.slice(0, 50));
+            // Reload data with current filters and new time range
+            if (currentFilters.sensorId) {
+                loadData(currentFilters);
             }
         }
 
         function refreshData() {
-            loadData();
+            if (currentFilters.sensorId) {
+                loadData(currentFilters);
+            } else {
+                showEmptyStateMessage();
+            }
+        }
+
+        function showChart(type) {
+            currentChart = type;
+
+            // Hide all chart containers
+            document.getElementById('temperatureChartContainer').style.display = 'none';
+            document.getElementById('pressureChartContainer').style.display = 'none';
+            document.getElementById('humidityChartContainer').style.display = 'none';
+
+            // Show selected chart
+            document.getElementById(`${type}ChartContainer`).style.display = 'block';
+
+            // Update stat card selection
+            setSelectedStatCard(type);
+        }
+
+        function setSelectedStatCard(type) {
+            // Remove selected class from all stat cards
+            document.querySelectorAll('.stat-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            // Add selected class to current chart's stat card
+            const cardMap = {
+                'temperature': '.stat-card-temp',
+                'pressure': '.stat-card-pressure',
+                'humidity': '.stat-card-humidity'
+            };
+
+            const selectedCard = document.querySelector(cardMap[type]);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            }
         }
 
         function showError(message) {
@@ -860,17 +894,66 @@
             `;
         }
 
-        function showNoDataMessage() {
-            document.getElementById('tableContainer').innerHTML = `
-                <div style="text-align: center; padding: 2rem; color: #7f8c8d;">
-                    📊 Aún no hay datos de sensores. ¡Comienza a enviar lecturas para ver las visualizaciones!
+        function showEmptyStateMessage() {
+            const container = document.getElementById('tableContainer');
+            container.innerHTML = `
+                <div style="text-align: center; color: #94a3b8; padding: 2rem;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+                    <h3 style="color: #f1f5f9; margin-bottom: 0.5rem;">Selecciona un Sensor</h3>
+                    <p>Ingresa un ID de sensor en el filtro de arriba y haz clic en "Aplicar Filtros" para comenzar a visualizar los datos.</p>
                 </div>
             `;
         }
 
+        function showNoDataMessage() {
+            const container = document.getElementById('tableContainer');
+            container.innerHTML = `
+                <div style="text-align: center; color: #94a3b8; padding: 2rem;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+                    <h3 style="color: #f1f5f9; margin-bottom: 0.5rem;">No hay datos disponibles</h3>
+                    <p>No se encontraron datos para el sensor seleccionado con los filtros aplicados.</p>
+                </div>
+            `;
+            clearAllCharts();
+        }
+
+        function clearAllCharts() {
+            // Clear temperature chart
+            temperatureChart.data.labels = [];
+            temperatureChart.data.datasets[0].data = [];
+            temperatureChart.update('none');
+
+            // Clear pressure chart
+            pressureChart.data.labels = [];
+            pressureChart.data.datasets[0].data = [];
+            pressureChart.update('none');
+
+            // Clear humidity chart
+            humidityChart.data.labels = [];
+            humidityChart.data.datasets[0].data = [];
+            humidityChart.update('none');
+
+            // Clear stats
+            document.getElementById('temp-value').textContent = '--';
+            document.getElementById('pressure-value').textContent = '--';
+            document.getElementById('humidity-value').textContent = '--';
+        }
+
         function applyFilters() {
-            // Get filter values from inputs
             const sensorId = document.getElementById('sensor-id').value.trim();
+
+            // Check if sensor ID is provided
+            if (!sensorId) {
+                alert('Por favor, ingrese un ID de sensor para visualizar los datos.');
+                return;
+            }
+
+            // Update current filters
+            currentFilters = {
+                sensorId: sensorId
+            };
+
+            // Get other filter values
             const dateFrom = document.getElementById('date-from').value;
             const dateTo = document.getElementById('date-to').value;
             const minTemp = document.getElementById('min-temp').value;
@@ -880,9 +963,6 @@
             const minHumidity = document.getElementById('min-humidity').value;
             const maxHumidity = document.getElementById('max-humidity').value;
 
-            // Build the filter object
-            currentFilters = {};
-            if (sensorId) currentFilters.sensorId = sensorId;
             if (dateFrom) currentFilters.dateFrom = dateFrom;
             if (dateTo) currentFilters.dateTo = dateTo;
             if (minTemp) currentFilters.minTemp = parseFloat(minTemp);
@@ -892,18 +972,24 @@
             if (minHumidity) currentFilters.minHumidity = parseFloat(minHumidity);
             if (maxHumidity) currentFilters.maxHumidity = parseFloat(maxHumidity);
 
-            // Apply filters to current data
-            const filteredData = applyAllFilters(allReadings);
-            updateCharts(filteredData);
-            updateStats(filteredData);
-            updateTable(filteredData.slice(0, 50));
+            // Load data with the new filters
+            loadData(currentFilters);
 
-            // Show active filters
+            // Set up auto-refresh now that we have a sensor selected
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+            updateInterval = setInterval(() => loadData(currentFilters), 30000);
+
+            // Update active filters display
             updateActiveFiltersDisplay();
         }
 
         function clearFilters() {
-            // Clear all filter inputs
+            // Clear the filters object
+            currentFilters = {};
+
+            // Clear all input fields
             document.getElementById('sensor-id').value = '';
             document.getElementById('date-from').value = '';
             document.getElementById('date-to').value = '';
@@ -914,113 +1000,80 @@
             document.getElementById('min-humidity').value = '';
             document.getElementById('max-humidity').value = '';
 
-            // Clear current filters
-            currentFilters = {};
+            // Clear all charts
+            clearAllCharts();
 
-            // Reapply only time range filter
-            const filteredData = applyAllFilters(allReadings);
-            updateCharts(filteredData);
-            updateStats(filteredData);
-            updateTable(filteredData.slice(0, 50));
+            // Show empty state message
+            showEmptyStateMessage();
 
-            // Hide active filters display
-            document.getElementById('activeFiltersContainer').style.display = 'none';
+            // Clear auto-refresh
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+
+            // Clear active filters display
+            updateActiveFiltersDisplay();
         }
 
         function updateActiveFiltersDisplay() {
             const container = document.getElementById('activeFiltersContainer');
-            const filterKeys = Object.keys(currentFilters);
 
-            if (filterKeys.length === 0) {
+            if (Object.keys(currentFilters).length === 0) {
                 container.style.display = 'none';
                 return;
             }
 
-            const filterTags = filterKeys.map(key => {
-                let displayText = '';
-                const value = currentFilters[key];
-
-                switch (key) {
-                    case 'sensorId':
-                        displayText = `Sensor: ${value}`;
-                        break;
-                    case 'dateFrom':
-                        displayText = `Desde: ${value}`;
-                        break;
-                    case 'dateTo':
-                        displayText = `Hasta: ${value}`;
-                        break;
-                    case 'minTemp':
-                        displayText = `Temp ≥ ${value}°C`;
-                        break;
-                    case 'maxTemp':
-                        displayText = `Temp ≤ ${value}°C`;
-                        break;
-                    case 'minPressure':
-                        displayText = `Presión ≥ ${value} hPa`;
-                        break;
-                    case 'maxPressure':
-                        displayText = `Presión ≤ ${value} hPa`;
-                        break;
-                    case 'minHumidity':
-                        displayText = `Humedad ≥ ${value}%`;
-                        break;
-                    case 'maxHumidity':
-                        displayText = `Humedad ≤ ${value}%`;
-                        break;
-                }
-
-                return `<div class="filter-tag">${displayText} <span class="remove" onclick="removeFilter('${key}')">×</span></div>`;
-            }).join('');
-
-            container.innerHTML = filterTags;
             container.style.display = 'flex';
+            container.innerHTML = '';
+
+            if (currentFilters.sensorId) {
+                const tag = document.createElement('div');
+                tag.className = 'filter-tag';
+                tag.innerHTML = `Sensor: ${currentFilters.sensorId} <span class="remove" onclick="removeFilter('sensorId')">×</span>`;
+                container.appendChild(tag);
+            }
+
+            if (currentFilters.dateFrom) {
+                const tag = document.createElement('div');
+                tag.className = 'filter-tag';
+                tag.innerHTML = `Desde: ${currentFilters.dateFrom} <span class="remove" onclick="removeFilter('dateFrom')">×</span>`;
+                container.appendChild(tag);
+            }
+
+            if (currentFilters.dateTo) {
+                const tag = document.createElement('div');
+                tag.className = 'filter-tag';
+                tag.innerHTML = `Hasta: ${currentFilters.dateTo} <span class="remove" onclick="removeFilter('dateTo')">×</span>`;
+                container.appendChild(tag);
+            }
         }
 
         function removeFilter(filterKey) {
             delete currentFilters[filterKey];
 
-            // Clear the corresponding input
-            const inputMap = {
-                'sensorId': 'sensor-id',
-                'dateFrom': 'date-from',
-                'dateTo': 'date-to',
-                'minTemp': 'min-temp',
-                'maxTemp': 'max-temp',
-                'minPressure': 'min-pressure',
-                'maxPressure': 'max-pressure',
-                'minHumidity': 'min-humidity',
-                'maxHumidity': 'max-humidity'
-            };
-
-            const inputId = inputMap[filterKey];
-            if (inputId) {
-                document.getElementById(inputId).value = '';
+            // Clear the corresponding input field
+            if (filterKey === 'sensorId') {
+                document.getElementById('sensor-id').value = '';
+                // If sensor ID is removed, clear everything
+                clearFilters();
+                return;
+            } else if (filterKey === 'dateFrom') {
+                document.getElementById('date-from').value = '';
+            } else if (filterKey === 'dateTo') {
+                document.getElementById('date-to').value = '';
             }
 
-            // Reapply filters
-            const filteredData = applyAllFilters(allReadings);
-            updateCharts(filteredData);
-            updateStats(filteredData);
-            updateTable(filteredData.slice(0, 50));
+            // Reload data with updated filters
+            if (currentFilters.sensorId) {
+                loadData(currentFilters);
+            } else {
+                clearFilters();
+            }
 
-            // Update display
             updateActiveFiltersDisplay();
         }
 
-        function showChart(type) {
-            document.getElementById('temperatureChartContainer').style.display = (type === 'temperature') ? '' : 'none';
-            document.getElementById('pressureChartContainer').style.display = (type === 'pressure') ? '' : 'none';
-            document.getElementById('humidityChartContainer').style.display = (type === 'humidity') ? '' : 'none';
-            setSelectedStatCard(type);
-            currentChart = type;
-        }
-
-        function setSelectedStatCard(type) {
-            document.querySelector('.stat-card-temp').classList.toggle('selected', type === 'temperature');
-            document.querySelector('.stat-card-pressure').classList.toggle('selected', type === 'pressure');
-            document.querySelector('.stat-card-humidity').classList.toggle('selected', type === 'humidity');
-        }
 
         // Clean up on page unload
         window.addEventListener('beforeunload', function() {
