@@ -39,16 +39,16 @@ struct SensorPacket { //structura que representa un paquete de datos del sensor.
 
 const char* SERVER_IP = "127.0.0.1";                        // La IP del Servidor Intermedio (localhost)
 const int SERVER_PORT = 8080;                               // El puerto donde escucha el Servidor Intermedio
-const std::string HMAC_KEY = "my-super-secret-key-for-dev"; // La clave secreta compartida para generar la firma
+const std::string HMAC_KEY = "clave_secreta_1111"; // La clave secreta compartida para generar la firma
 const int16_t SENSOR_ID = 101;                              // El ID de este sensor
 
 /**
  * @brief Calcula la firma HMAC-SHA256 para los campos de datos del paquete.
  * @param packet El paquete con los datos ya llenos (excepto la firma).
- * @param out_signature Un puntero a un buffer de 32 bytes donde se escribirá la firma resultante.
+ * @param firma_resultante Un puntero a un buffer de 32 bytes donde se escribirá la firma resultante.
  */
 
-void calculate_hmac(const SensorPacket& packet, unsigned char* out_signature) {
+void calcular_hmac(const SensorPacket& packet, unsigned char* firma_resultante) {
     // calculo de hmac
 
     // 1. Calculamos el tamaño total de los datos que vamos a firmar.
@@ -86,7 +86,7 @@ void calculate_hmac(const SensorPacket& packet, unsigned char* out_signature) {
     memcpy(ptr, &packet.humidity, sizeof(packet.humidity));
 
     // 4. Usamos la función HMAC de OpenSSL para calcular la firma.
-    unsigned int signature_len = 32;//longitud de hmac es 32 bytes
+    unsigned int len_firma = 32;//longitud de hmac es 32 bytes
     //para almacenar la firma HMAC.
     HMAC(
         EVP_sha256(),                   // Algoritmo de hash a usar: SHA256
@@ -94,8 +94,8 @@ void calculate_hmac(const SensorPacket& packet, unsigned char* out_signature) {
         HMAC_KEY.length(),              // Longitud de la clave
         data_buffer.data(),             // El búfer con los datos concatenados
         data_buffer.size(),             // El tamaño de los datos
-        out_signature,                  // Búfer de salida para la firma
-        &signature_len                  // Puntero a la longitud de la firma (debe ser 32)
+        firma_resultante,                  // Búfer de salida para la firma
+        &len_firma                  // Puntero a la longitud de la firma (debe ser 32)
     );
 }
 
@@ -131,7 +131,7 @@ int main() {
         packet.humidity = static_cast<float>(hum_dist(gen));
 
         // --- 4. CALCULAR Y ASIGNAR LA FIRMA ---
-        calculate_hmac(packet, packet.signature); // Calculamos la firma y la guardamos en `packet.signature`.
+        calcular_hmac(packet, packet.signature); // Calculamos la firma y la guardamos en `packet.signature`.
 
         // Imprimimos los datos que se van a enviar para poder monitorear el cliente.
         std::cout << "\n========== Paquete de Sensor ==========" << std::endl;

@@ -15,7 +15,7 @@ LISTEN_PORT = 8080
 FINAL_SERVER_URL = "http://localhost:8000/readings/"
 
 # Clave secreta compartida para la verificación HMAC. DEBE ser la misma que en el cliente C++.
-HMAC_KEY = b"my-super-secret-key-for-dev"
+HMAC_KEY = b"clave_secreta_1111"
 
 # Definición del formato del paquete binario y su tamaño.
 # Corresponde a la struct de C++: <h Q f f f 32s>
