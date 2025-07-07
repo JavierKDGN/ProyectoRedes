@@ -1,8 +1,15 @@
 import asyncio
 import aiohttp
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
+from datetime import datetime
 
-from final_server.app.schemas import SensorReadingCreate
+#Se define el esquema localmente.
+class SensorReadingCreate(BaseModel):
+    sensor_id: int
+    timestamp: datetime
+    temperature: float
+    pressure: float
+    humidity: float
 
 TEMP_RANGE = (0,30)
 HUMI_RANGE = (40,70)
