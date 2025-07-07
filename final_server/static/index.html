@@ -416,8 +416,8 @@
     <div class="filters">
         <div class="filter-row">
             <div class="filter-group">
-                <label class="filter-label" for="sensor-id">ID Sensor</label>
-                <input class="filter-input" type="text" id="sensor-id" placeholder="Filtrar por ID">
+                <label class="filter-label" for="sensor-id">ID Sensor (opcional)</label>
+                <input class="filter-input" type="text" id="sensor-id" placeholder="Dejar vacío para todos los sensores">
             </div>
             <div class="filter-group">
                 <label class="filter-label" for="date-from">Fecha Desde</label>
@@ -537,12 +537,13 @@
         // Initialize the dashboard
         document.addEventListener('DOMContentLoaded', function() {
             initializeCharts();
-            // Don't load data automatically - wait for user to select a sensor
-            showEmptyStateMessage();
+            // Load all sensors by default
+            loadData({});
             setSelectedStatCard('temperature');
             showChart('temperature');
 
-            // Don't set up auto-refresh initially - only after a sensor is selected
+            // Set up auto-refresh to load all data by default
+            updateInterval = setInterval(() => loadData(currentFilters), 30000);
         });
 
         function initializeCharts() {
@@ -649,23 +650,17 @@
 
         }
 
-        async function loadData(filters = null) {
+        async function loadData(filters = {}) {
             try {
                 let url = '/readings/?limit=1000';
-
-                // If no filters provided or no sensor_id, don't fetch data
-                if (!filters || !filters.sensorId) {
-                    clearAllCharts();
-                    showEmptyStateMessage();
-                    return;
-                }
 
                 // Build query parameters for server-side filtering
                 const params = new URLSearchParams();
                 params.append('limit', '1000');
 
-                if (filters.sensorId) {
-                    params.append('sensor_id', filters.sensorId);
+                // Only add sensor_id if it's provided and not empty
+                if (filters.sensorId && filters.sensorId.trim()) {
+                    params.append('sensor_id', filters.sensorId.trim());
                 }
                 if (filters.dateFrom) {
                     params.append('start_date', filters.dateFrom);
@@ -802,7 +797,7 @@
 
             const table = `
                 <div style="margin-bottom: 1rem; color: #94a3b8; text-align: center;">
-                    Mostrando ${data.length} de ${allReadings.length} lecturas
+                    Mostrando ${data.length} lecturas
                 </div>
                 <table>
                     <thead>
@@ -899,8 +894,8 @@
             container.innerHTML = `
                 <div style="text-align: center; color: #94a3b8; padding: 2rem;">
                     <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
-                    <h3 style="color: #f1f5f9; margin-bottom: 0.5rem;">Selecciona un Sensor</h3>
-                    <p>Ingresa un ID de sensor en el filtro de arriba y haz clic en "Aplicar Filtros" para comenzar a visualizar los datos.</p>
+                    <h3 style="color: #f1f5f9; margin-bottom: 0.5rem;">Todos los Sensores</h3>
+                    <p>Mostrando datos de todos los sensores. Puedes filtrar por un sensor específico usando el campo "ID Sensor" arriba.</p>
                 </div>
             `;
         }
@@ -942,16 +937,12 @@
         function applyFilters() {
             const sensorId = document.getElementById('sensor-id').value.trim();
 
-            // Check if sensor ID is provided
-            if (!sensorId) {
-                alert('Por favor, ingrese un ID de sensor para visualizar los datos.');
-                return;
-            }
+            // Update current filters - sensor ID can be empty to show all sensors
+            currentFilters = {};
 
-            // Update current filters
-            currentFilters = {
-                sensorId: sensorId
-            };
+            if (sensorId) {
+                currentFilters.sensorId = sensorId;
+            }
 
             // Get other filter values
             const dateFrom = document.getElementById('date-from').value;
@@ -975,12 +966,6 @@
             // Load data with the new filters
             loadData(currentFilters);
 
-            // Set up auto-refresh now that we have a sensor selected
-            if (updateInterval) {
-                clearInterval(updateInterval);
-            }
-            updateInterval = setInterval(() => loadData(currentFilters), 30000);
-
             // Update active filters display
             updateActiveFiltersDisplay();
         }
@@ -1000,17 +985,8 @@
             document.getElementById('min-humidity').value = '';
             document.getElementById('max-humidity').value = '';
 
-            // Clear all charts
-            clearAllCharts();
-
-            // Show empty state message
-            showEmptyStateMessage();
-
-            // Clear auto-refresh
-            if (updateInterval) {
-                clearInterval(updateInterval);
-                updateInterval = null;
-            }
+            // Load all sensors data (no filters)
+            loadData({});
 
             // Clear active filters display
             updateActiveFiltersDisplay();
@@ -1055,9 +1031,6 @@
             // Clear the corresponding input field
             if (filterKey === 'sensorId') {
                 document.getElementById('sensor-id').value = '';
-                // If sensor ID is removed, clear everything
-                clearFilters();
-                return;
             } else if (filterKey === 'dateFrom') {
                 document.getElementById('date-from').value = '';
             } else if (filterKey === 'dateTo') {
@@ -1065,11 +1038,7 @@
             }
 
             // Reload data with updated filters
-            if (currentFilters.sensorId) {
-                loadData(currentFilters);
-            } else {
-                clearFilters();
-            }
+            loadData(currentFilters);
 
             updateActiveFiltersDisplay();
         }
