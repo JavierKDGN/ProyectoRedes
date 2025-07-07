@@ -509,8 +509,19 @@
             </div>
         </div>
 
+        <!-- Statistics Table -->
         <div class="data-table">
-            <h3 style="margin-bottom: 1rem; color: #2c3e50;">📋 Lecturas Recientes</h3>
+            <h3 style="margin-bottom: 1rem; color: #f1f5f9;">📊 Estadísticas de Datos</h3>
+            <div id="statsContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Cargando estadísticas...
+                </div>
+            </div>
+        </div>
+
+        <div class="data-table">
+            <h3 style="margin-bottom: 1rem; color: #f1f5f9;">📋 Lecturas Recientes</h3>
             <div id="tableContainer">
                 <div class="loading">
                     <div class="spinner"></div>
@@ -693,10 +704,142 @@
                 updateStats(finalData);
                 updateTable(finalData.slice(0, 50));
 
+                // Load statistics with the same filters
+                loadStatistics(filters);
+
             } catch (error) {
                 console.error('Error loading data:', error);
                 showError('Failed to load sensor data. Please check your connection.');
             }
+        }
+
+        async function loadStatistics(filters = {}) {
+            try {
+                // Build query parameters for server-side filtering
+                const params = new URLSearchParams();
+
+                // Only add sensor_id if it's provided and not empty
+                if (filters.sensorId && filters.sensorId.trim()) {
+                    params.append('sensor_id', filters.sensorId.trim());
+                }
+                if (filters.dateFrom) {
+                    params.append('start_date', filters.dateFrom);
+                }
+                if (filters.dateTo) {
+                    params.append('end_date', filters.dateTo);
+                }
+
+                // Add temperature, pressure, and humidity range filters
+                if (filters.minTemp !== undefined) {
+                    params.append('min_temp', filters.minTemp);
+                }
+                if (filters.maxTemp !== undefined) {
+                    params.append('max_temp', filters.maxTemp);
+                }
+                if (filters.minPressure !== undefined) {
+                    params.append('min_pres', filters.minPressure);
+                }
+                if (filters.maxPressure !== undefined) {
+                    params.append('max_pres', filters.maxPressure);
+                }
+                if (filters.minHumidity !== undefined) {
+                    params.append('min_humi', filters.minHumidity);
+                }
+                if (filters.maxHumidity !== undefined) {
+                    params.append('max_humi', filters.maxHumidity);
+                }
+
+                const url = `/readings/stats/?${params.toString()}`;
+
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const statsData = await response.json();
+                updateStatisticsTable(statsData);
+
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+                document.getElementById('statsContainer').innerHTML = `
+                    <div class="error">
+                        ⚠️ Error al cargar estadísticas
+                    </div>
+                `;
+            }
+        }
+
+        function updateStatisticsTable(statsData) {
+            const container = document.getElementById('statsContainer');
+
+            if (statsData.count === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #7f8c8d;">No hay datos disponibles para mostrar estadísticas</p>';
+                return;
+            }
+
+            const stats = statsData.stats;
+
+            const table = `
+                <div style="margin-bottom: 1rem; color: #94a3b8; text-align: center;">
+                    Estadísticas basadas en ${statsData.count} lecturas segun los filtros aplicados.
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Métrica</th>
+                            <th>Temperatura (°C)</th>
+                            <th>Presión (hPa)</th>
+                            <th>Humedad (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Promedio</strong></td>
+                            <td>${stats.temperature?.mean?.toFixed(2) || '--'}</td>
+                            <td>${stats.pressure?.mean?.toFixed(2) || '--'}</td>
+                            <td>${stats.humidity?.mean?.toFixed(2) || '--'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Mínimo</strong></td>
+                            <td>${stats.temperature?.min?.toFixed(2) || '--'}</td>
+                            <td>${stats.pressure?.min?.toFixed(2) || '--'}</td>
+                            <td>${stats.humidity?.min?.toFixed(2) || '--'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Máximo</strong></td>
+                            <td>${stats.temperature?.max?.toFixed(2) || '--'}</td>
+                            <td>${stats.pressure?.max?.toFixed(2) || '--'}</td>
+                            <td>${stats.humidity?.max?.toFixed(2) || '--'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Desviación Estándar</strong></td>
+                            <td>${stats.temperature?.std?.toFixed(2) || '--'}</td>
+                            <td>${stats.pressure?.std?.toFixed(2) || '--'}</td>
+                            <td>${stats.humidity?.std?.toFixed(2) || '--'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Mediana (50%)</strong></td>
+                            <td>${stats.temperature?.['50%']?.toFixed(2) || '--'}</td>
+                            <td>${stats.pressure?.['50%']?.toFixed(2) || '--'}</td>
+                            <td>${stats.humidity?.['50%']?.toFixed(2) || '--'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Percentil 25%</strong></td>
+                            <td>${stats.temperature?.['25%']?.toFixed(2) || '--'}</td>
+                            <td>${stats.pressure?.['25%']?.toFixed(2) || '--'}</td>
+                            <td>${stats.humidity?.['25%']?.toFixed(2) || '--'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Percentil 75%</strong></td>
+                            <td>${stats.temperature?.['75%']?.toFixed(2) || '--'}</td>
+                            <td>${stats.pressure?.['75%']?.toFixed(2) || '--'}</td>
+                            <td>${stats.humidity?.['75%']?.toFixed(2) || '--'}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = table;
         }
 
         function applyAdditionalFilters(data, filters) {
@@ -1023,6 +1166,51 @@
                 tag.innerHTML = `Hasta: ${currentFilters.dateTo} <span class="remove" onclick="removeFilter('dateTo')">×</span>`;
                 container.appendChild(tag);
             }
+
+            // Temperature filters
+            if (currentFilters.minTemp !== undefined) {
+                const tag = document.createElement('div');
+                tag.className = 'filter-tag';
+                tag.innerHTML = `Temp Min: ${currentFilters.minTemp}°C <span class="remove" onclick="removeFilter('minTemp')">×</span>`;
+                container.appendChild(tag);
+            }
+
+            if (currentFilters.maxTemp !== undefined) {
+                const tag = document.createElement('div');
+                tag.className = 'filter-tag';
+                tag.innerHTML = `Temp Max: ${currentFilters.maxTemp}°C <span class="remove" onclick="removeFilter('maxTemp')">×</span>`;
+                container.appendChild(tag);
+            }
+
+            // Pressure filters
+            if (currentFilters.minPressure !== undefined) {
+                const tag = document.createElement('div');
+                tag.className = 'filter-tag';
+                tag.innerHTML = `Presión Min: ${currentFilters.minPressure} hPa <span class="remove" onclick="removeFilter('minPressure')">×</span>`;
+                container.appendChild(tag);
+            }
+
+            if (currentFilters.maxPressure !== undefined) {
+                const tag = document.createElement('div');
+                tag.className = 'filter-tag';
+                tag.innerHTML = `Presión Max: ${currentFilters.maxPressure} hPa <span class="remove" onclick="removeFilter('maxPressure')">×</span>`;
+                container.appendChild(tag);
+            }
+
+            // Humidity filters
+            if (currentFilters.minHumidity !== undefined) {
+                const tag = document.createElement('div');
+                tag.className = 'filter-tag';
+                tag.innerHTML = `Humedad Min: ${currentFilters.minHumidity}% <span class="remove" onclick="removeFilter('minHumidity')">×</span>`;
+                container.appendChild(tag);
+            }
+
+            if (currentFilters.maxHumidity !== undefined) {
+                const tag = document.createElement('div');
+                tag.className = 'filter-tag';
+                tag.innerHTML = `Humedad Max: ${currentFilters.maxHumidity}% <span class="remove" onclick="removeFilter('maxHumidity')">×</span>`;
+                container.appendChild(tag);
+            }
         }
 
         function removeFilter(filterKey) {
@@ -1035,6 +1223,18 @@
                 document.getElementById('date-from').value = '';
             } else if (filterKey === 'dateTo') {
                 document.getElementById('date-to').value = '';
+            } else if (filterKey === 'minTemp') {
+                document.getElementById('min-temp').value = '';
+            } else if (filterKey === 'maxTemp') {
+                document.getElementById('max-temp').value = '';
+            } else if (filterKey === 'minPressure') {
+                document.getElementById('min-pressure').value = '';
+            } else if (filterKey === 'maxPressure') {
+                document.getElementById('max-pressure').value = '';
+            } else if (filterKey === 'minHumidity') {
+                document.getElementById('min-humidity').value = '';
+            } else if (filterKey === 'maxHumidity') {
+                document.getElementById('max-humidity').value = '';
             }
 
             // Reload data with updated filters

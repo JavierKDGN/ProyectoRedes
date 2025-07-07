@@ -84,7 +84,7 @@ def get_reading_stats(sensor_id: Optional[int] = None,
                   max_humi: Optional[float] = None,
                   db: Session = Depends(get_db)):
 
-    readings = crud.get_filtered_readings(db, skip = 0, limit = 1000,
+    readings = crud.get_filtered_readings(db, skip = 0, limit = 10000,
                                           sensor_id = sensor_id,
                                           start_date = start_date,
                                           end_date = end_date,

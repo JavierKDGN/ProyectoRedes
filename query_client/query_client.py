@@ -45,7 +45,7 @@ async def fetch_data(session, url):
 # Main asincrono
 async def main():
     # URL del servidor
-    url = "http://localhost:8000/readings/?skip=0&limit=10"
+    url = "http://localhost:8000/readings/?skip=0&limit=100"
     max_retries = 5
     # Crear una sesion aiohttp para hacer requests asincronas
     async with aiohttp.ClientSession() as session:
@@ -68,7 +68,8 @@ async def main():
                     await asyncio.sleep(backoff)
 
             else:
-                print("Intentos maximos alcanzados. Saltando iteracion")
+                print("Intentos maximos alcanzados. Cerrando...")
+                return
             await asyncio.sleep(5)
 
 
