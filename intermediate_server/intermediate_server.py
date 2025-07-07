@@ -91,9 +91,9 @@ class SensorTCPHandler(socketserver.BaseRequestHandler):
             json_payload = {
                 "sensor_id": sensor_id,
                 "timestamp": timestamp_iso,
-                "temperature": temperature,
-                "pressure": pressure,
-                "humidity": humidity
+                "temperature": round(temperature, 2),
+                "pressure": round(pressure, 2),
+                "humidity": round(humidity, 2)
             }
             
             print(f"[*] Datos transformados a JSON: {json.dumps(json_payload)}")
