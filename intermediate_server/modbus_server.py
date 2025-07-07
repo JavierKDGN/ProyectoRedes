@@ -20,7 +20,7 @@ def initialize_datastore():
     #Se inicializan los registros a 0.
     data_block = ModbusSequentialDataBlock(0, [0] * 10)
     #Se crea un contexto esclavo.
-    slave_context = ModbusSlaveContext(ir=data_block, zero_mode=True)
+    slave_context = ModbusSlaveContext(ir=data_block)
     #Se define el contexto global del servidor.
     MODBUS_CONTEXT = ModbusServerContext(slaves=slave_context, single=True)
     print("[MODBUS] Almacén de datos (datastore) inicializado.")
