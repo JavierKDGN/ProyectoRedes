@@ -35,9 +35,12 @@ En una Terminal:
    source venv/bin/activate
 
 4. Instalar dependencias:
-   pip install "fastapi[all]"
-   pip install sqlalchemy
-   pip install pandas
+
+	pip install "fastapi[all]"
+
+	pip install sqlalchemy
+
+	pip install pandas
 
 5. Ejecutar el servidor FastAPI:
    uvicorn app.final_server:app --reload
@@ -61,8 +64,10 @@ En una segunda Terminal:
    source venv/bin/activate
 
 4. Instalar dependencias:
-   pip install requests
-   pip install pymodbus
+
+   	pip install requests
+
+	pip install pymodbus
 
 5. Ejecutar el servidor:
    python3 intermediate_server.py
@@ -116,8 +121,10 @@ En una cuarta Terminal:
    source venv/bin/activate
 
 4. Instalar dependencias:
-   pip install aiohttp
-   pip install pydantic
+   	
+	pip install aiohttp
+   	
+	pip install pydantic
 
 5. Ejecutar el cliente de consulta:
    python query_client.py
