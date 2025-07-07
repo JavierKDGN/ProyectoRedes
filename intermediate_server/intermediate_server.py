@@ -4,7 +4,11 @@ import hmac
 import hashlib
 import json
 import requests
+import threading
+import time
 from datetime import datetime, timezone
+
+import modbus_server
 
 #Direccion y puerto donde el servidor intermedio escuchará las conexiones TCP del sensor C++
 LISTEN_HOST = "0.0.0.0"  # Escuchar en todas las interfaces de red disponibles
@@ -44,7 +48,7 @@ class SensorTCPHandler(socketserver.BaseRequestHandler):
             
             #Si no se recibe el tamaño esperado, el paquete es inválido o la conexión se cerró.
             if len(data) < PACKET_SIZE:
-                print(f"[!] Recibido paquete incompleto, se esperaban {PACKET_SIZE} bytes, se recibieron {len(data)}.")
+                print(f"[!] Paquete incompleto, se esperaban {PACKET_SIZE} bytes, se recibieron {len(data)}. (Descartando...)")
                 return
 
             #DESEMPAQUETAR DATOS BINARIOS: Usamos struct.unpack para convertir los bytes en tipos de datos de Python.
@@ -69,10 +73,14 @@ class SensorTCPHandler(socketserver.BaseRequestHandler):
 
             #Comparamos las firmas de forma segura, para evitar ataques de temporización.
             if not hmac.compare_digest(calculated_signature, received_signature):
-                print(f"[!!] ALERTA DE SEGURIDAD: Firma HMAC inválida para el sensor {sensor_id}. Paquete descartado")
+                print(f"[!!] ALERTA DE SEGURIDAD: Firma HMAC inválida para el sensor {sensor_id}. Paquete descartado.")
                 return
             
             print(f"[OK] Firma HMAC verificada exitosamente.")
+            
+            #Se llama a la función del archivo modbus_server
+            print("[*] Actualizando registros Modbus...")
+            modbus_server.update_modbus_registers(sensor_id, temperature, pressure, humidity)
 
             #TRANSFORMAR A JSON:
             #Primero, convertimos el timestamp de Unix (en milisegundos) a formato ISO 8601 en UTC.
@@ -112,13 +120,24 @@ class SensorTCPHandler(socketserver.BaseRequestHandler):
 
 
 if __name__ == "__main__":
-    #Se usa ThreadingTCPServer, para que cada cliente sea manejado en su propio hilo.
+    #Se inicializa el datastore del servidor Modbus.
+    modbus_server.initialize_datastore()
+    
+    #Se crea y se inicia el hilo del servidor Modbus.
+    modbus_thread = threading.Thread(target=modbus_server.run_modbus_server_thread)
+    modbus_thread.daemon = True
+    modbus_thread.start()
+    time.sleep(1)
+
+    
+    #Se inicia el servidor TCP usando ThreadingTCPServer, para que cada cliente sea manejado en su propio hilo.
     #Esto permite al servidor manejar múltiples sensores concurrentemente.
     with socketserver.ThreadingTCPServer((LISTEN_HOST, LISTEN_PORT), SensorTCPHandler) as server:
-        print("=================================================")
+        print("===================================================")
         print("     Servidor Intermedio Iniciado")
         print(f"    Escuchando conexiones en {LISTEN_HOST}:{LISTEN_PORT}")
-        print("=================================================")
+        print(f"    Escuchando Modbus TCP en el puerto {modbus_server.MODBUS_PORT}")
+        print("===================================================")
         print("Esperando datos binarios de los sensores...")
         
         #Inicia el servidor y lo mantiene corriendo hasta que se detenga manualmente (con Ctrl+C).
