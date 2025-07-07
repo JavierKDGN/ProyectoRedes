@@ -106,9 +106,9 @@ int main() {
     std::random_device rd; // Dispositivo aleatorio para obtener una semilla única.
     std::mt19937 gen(rd()); //inicializar el generador con la semilla rd
     // Definimos las distribuciones para cada métrica del sensor.
-    std::uniform_real_distribution<> temp_dist(20.0, 30.0); // en °C
-    std::uniform_real_distribution<> press_dist(1000.0, 1020.0); // en hPa
-    std::uniform_real_distribution<> hum_dist(40.0, 60.0);      // en %
+    std::uniform_real_distribution<> temp_dist(15.0, 45.0); // en °C
+    std::uniform_real_distribution<> press_dist(1000.0, 1035.0); // en hPa
+    std::uniform_real_distribution<> hum_dist(40.0, 85.0);      // en %
 
     // Mensaje de inicio
     std::cout << "Cliente Sensor C++ iniciado" << std::endl;
