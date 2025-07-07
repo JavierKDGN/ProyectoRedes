@@ -7,8 +7,7 @@ import requests
 import threading
 import time
 from datetime import datetime, timezone
-
-import modbus_server
+from . import modbus_server
 
 #Direccion y puerto donde el servidor intermedio escuchará las conexiones TCP del sensor C++
 LISTEN_HOST = "0.0.0.0"  # Escuchar en todas las interfaces de red disponibles
