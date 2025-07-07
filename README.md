@@ -1,137 +1,135 @@
-# Proyecto: Plataforma IoT Distribuida y Segura
-(Readme generado por Gemini 2.5 Pro)
+===================================================================
+                INSTRUCCIONES DE EJECUCIÓN DEL PROYECTO
+===================================================================
+Paso 0: Requisitos Previos
+-------------------------------------------------------------------
 
-Este repositorio contiene el código fuente para el proyecto semestral de Redes de Computadores. El objetivo es diseñar e implementar un sistema distribuido que simula un entorno de monitoreo industrial, manejando la transmisión, almacenamiento y análisis de datos de sensores.
+1. Instalar Git
+2. Instalar Python 3.8 o superior
+3. Instalar un compilador de C++ (g++ es estándar en Linux).
+4. Instalar las librerías de desarrollo de OpenSSL.
+   - En Debian/Ubuntu: sudo apt-get install libssl-dev
 
-## Arquitectura del Sistema
+   *Librerías necesarias para Cliente Sensor.
+-------------------------------------------------------------------
+Paso 1: Clonar el Repositorio
+-------------------------------------------------------------------
 
-El sistema se compone de cuatro módulos que se comunican en una cadena de procesamiento:
+Abrir una terminal y ejecuta los siguientes comandos:
 
-`[1. Cliente Sensor (C++)]`
+git clone https://github.com/JavierKDGN/ProyectoRedes.git
 
-`[2. Servidor Intermedio (Python)]`
+-------------------------------------------------------------------
+Paso 2: Ejecutar Módulo 3 (Servidor Final - FastAPI)
+-------------------------------------------------------------------
 
-`[3. Servidor Final (FastAPI Python)]`
+En una Terminal:
 
-`[4. Cliente de Consulta (Python)]`
+1. Navegar a la carpeta del servidor final:
+   cd ~/ProyectoRedes/final_server/
 
-**Flujo de Datos:**
+2. Crear entorno virtual:
+   python -m venv venv
 
-1.  El **Cliente Sensor** genera datos y los envía en formato binario a través de un socket TCP.
-2.  El **Servidor Intermedio** recibe los datos binarios, los valida, los transforma a formato JSON y los reenvía mediante una petición HTTP POST.
-3.  El **Servidor Final** recibe el JSON, lo valida y lo almacena en una base de datos SQLite. Expone los datos a través de una API REST.
-4.  El **Cliente de Consulta** consume la API REST periódicamente para monitorear los datos y generar alertas si los valores están fuera de los rangos permitidos.
+3. Activar entorno virtual:
+   source venv/bin/activate
 
----
+4. Instalar dependencias:
+   pip install "fastapi[all]"
+   pip install sqlalchemy
+   pip install pandas
 
-## Contratos de Datos (Data Contracts)
+5. Ejecutar el servidor FastAPI:
+   uvicorn app.final_server:app --reload
 
-Para que el sistema funcione, todos los componentes deben adherirse estrictamente a los siguientes formatos.
+   *Mostrará que está corriendo en http://127.0.0.1:8000.
+   *Dejar terminal abierta.
 
-### 1. Paquete Binario (Sensor -> Servidor Intermedio)
+-------------------------------------------------------------------
+Paso 3: Ejecutar Módulo 2 (Servidor Intermedio)
+-------------------------------------------------------------------
 
-La comunicación se realiza mediante una `struct` de C++ con empaquetado de 1 byte para evitar relleno.
+En una segunda Terminal:
 
-*   **Endianness:** Little Endian (estándar en x86/x64).
-*   **Firma:** HMAC-SHA256. La clave secreta compartida para desarrollo es: `my-super-secret-key-for-dev`.
-*   **Definición de la `struct` en C++:**
+1. Navegar a la carpeta del servidor intermedio:
+   cd ~/ProyectoRedes/intermediate_server/
 
-```cpp
-#pragma pack(push, 1)
-struct SensorPacket {
-    int16_t sensor_id;          // 2 bytes
-    uint64_t timestamp_ms;      // 8 bytes (Unix Epoch en milisegundos)
-    float temperature;          // 4 bytes
-    float pressure;             // 4 bytes
-    float humidity;             // 4 bytes
-    unsigned char signature[32];  // 32 bytes (HMAC-SHA256)
-};
-#pragma pack(pop)
-```
+2. Crear entorno virtual:
+   python3 -m venv venv
 
-*   **Tamaño Total del Paquete:** 54 bytes.
+3. Activar entorno virtual:
+   source venv/bin/activate
 
-### 2. Payload JSON (Servidor Intermedio -> Servidor Final)
+4. Instalar dependencias:
+   pip install requests
+   pip install pymodbus
 
-El Servidor Intermedio enviará una petición `HTTP POST` a la ruta `/readings/` del Servidor Final con el siguiente cuerpo en formato JSON.
+5. Ejecutar el servidor:
+   python3 intermediate_server.py
 
-*   **`Content-Type` Header:** `application/json`
-*   **Formato del Timestamp:** ISO 8601 en UTC (ej: `"2023-10-27T21:45:15.123Z"`).
-*   **Estructura del JSON:**
+   *Mostrará que está escuchando en el puerto 8080 y 502.
+   *Dejar terminal abierta.
 
-```json
-{
-  "sensor_id": 101,
-  "timestamp": "2023-10-27T21:45:15.123Z",
-  "temperature": 45.5,
-  "pressure": 101.3,
-  "humidity": 35.2
-}
-```
+-------------------------------------------------------------------
+Paso 4: Ejecutar Módulo 1 (Cliente Sensor - C++)
+-------------------------------------------------------------------
 
----
+En una tercera Terminal:
 
-## Componentes y Tareas Pendientes
+1. Navegar a la carpeta del cliente:
+   cd ~/ProyectoRedes/client_sensor/
 
-### 1. Cliente Sensor (`client-sensor-cpp/`)
+2. Compilar el código para crear el programa:
+   g++ main.cpp -o sensor_client -lssl -lcrypto
 
-Simula un sensor que genera y envía datos.
+3. Ejecutar el cliente:
+   ./sensor_client
 
-*   **Tecnología:** C++
-*   **Responsable:** [Nombre del Alumno]
-*   **Tareas (To-Do List):**
-    *   [ ] **1. Implementar la `struct SensorPacket`:** Definir la estructura de datos exactamente como se especifica en el contrato.
-    *   [ ] **2. Generar Datos Sintéticos:** Crear una función que genere valores aleatorios pero realistas para temperatura, presión y humedad.
-    *   [ ] **3. Calcular Firma HMAC:** Implementar la lógica para calcular el HMAC-SHA256 de los campos de datos usando una librería criptográfica (ej. OpenSSL).
-    *   [ ] **4. Lógica de Cliente TCP:** Crear un cliente de socket TCP que se conecte a la IP y puerto del Servidor Intermedio.
-    *   [ ] **5. Bucle Principal:** Crear un bucle que periódicamente (ej. `sleep(5)`):
-        *   Genere nuevos datos.
-        *   Calcule la firma.
-        *   Ensamble la `struct SensorPacket`.
-        *   Envíe la estructura serializada por el socket.
+   *Mostrará cómo se envían paquetes de datos cada 5 segundos.
+   *Dejar terminal abierta.
 
-### 2. Servidor Intermedio (`intermediate-server-python/`)
+-------------------------------------------------------------------
+Paso 5: Ver Resultados
+-------------------------------------------------------------------
 
-Recibe datos binarios, los valida, transforma y reenvía.
+Página Web:
 
-*   **Tecnología:** Python
-*   **Responsable:** [Nombre del Alumno]
-*   **Tareas (To-Do List):**
-    *   [ ] **1. Implementar Servidor TCP:** Usar `socketserver` o `asyncio` para crear un servidor TCP que escuche conexiones entrantes. Debe ser capaz de manejar múltiples clientes.
-    *   [ ] **2. Desempaquetar Datos Binarios:** Al recibir datos, leer exactamente 54 bytes y usar `struct.unpack()` con la cadena de formato correcta (`'<hQfff32s'`) para extraer los valores.
-    *   [ ] **3. Validar Firma HMAC:** Recalcular el HMAC-SHA256 de los datos recibidos y compararlo con la firma del paquete. Descartar paquetes inválidos.
-    *   [ ] **4. Transformar a JSON:** Construir un diccionario de Python con los datos y convertir el timestamp a formato ISO 8601.
-    *   [ ] **5. Implementar Cliente HTTP:** Usar la librería `requests` para enviar el diccionario como JSON (`json=payload`) al endpoint `/readings/` del Servidor Final.
-    *   [ ] **6. Manejo de Errores:** Implementar bloques `try...except` para manejar fallos de red (si el Servidor Final no responde).
+1. Abrir navegador e ingresar a: http://127.0.0.1:8000
 
-### 3. Servidor Final y API (`final-server-fastapi/`)
+2. En el campo "ID Sensor", escribir '101' y presionar "Aplicar Filtros".
+   
+   *Se mostrarán las gráficas, estadísticas y lecturas recientes en tiempo real.
 
-Almacena y expone los datos a través de una API REST.
+-------------------------------------------------------------------
+Paso 6: Ejecutar Módulo 4 (Cliente de Consulta de Alertas)
+-------------------------------------------------------------------
 
-*   **Tecnología:** Python, FastAPI, SQLModel
-*   **Responsable:** [Tu Nombre]
-*   **Tareas (To-Do List):**
-    *   [ ] **1. Configurar Proyecto FastAPI:** Estructurar el proyecto en módulos (`main.py`, `models.py`, `crud.py`, `database.py`).
-    *   [ ] **2. Definir Modelos (SQLModel):** En `models.py`, crear el modelo `SensorReading` que sirva tanto para la tabla de la base de datos (SQLite) como para la validación de la API.
-    *   [ ] **3. Crear Lógica de Base de Datos (CRUD):** En `crud.py`, implementar las funciones para crear (`create_sensor_reading`) y leer (`get_sensor_readings`) registros.
-    *   [ ] **4. Implementar Endpoints de la API:** En `main.py`:
-        *   Crear el endpoint `POST /readings/` que recibe datos del Servidor Intermedio y los guarda en la BD.
-        *   Crear el endpoint `GET /readings/` que devuelve los datos almacenados. Permitir parámetros de consulta como `limit`.
-    *   [ ] **(Stretch Goal) 5. Visualización Web:** Servir un archivo HTML/JS simple que consulte el endpoint GET y muestre los datos en una tabla o gráfica.
+En una cuarta Terminal:
 
-### 4. Cliente de Consulta (`query-client-python/`)
+1. Navegar a la carpeta del cliente de consulta:
+   cd ~/ProyectoRedes/query_client/
 
-Monitorea los datos de la API y genera alertas.
+2. Crear entorno virtual:
+   python3 -m venv venv
 
-*   **Tecnología:** Python, `httpx`, `asyncio`
-*   **Responsable:** [Nombre del Alumno]
-*   **Tareas (To-Do List):**
-    *   [ ] **1. Configurar el Cliente Asíncrono:** Usar `httpx.AsyncClient` para las peticiones HTTP.
-    *   [ ] **2. Implementar Bucle de Monitoreo:** Crear una función `async` que se ejecute en un bucle infinito (`while True`).
-    *   [ ] **3. Consultar la API:** Dentro del bucle, hacer una petición `GET` al endpoint `/readings/` del Servidor Final y esperar (`await`) la respuesta.
-    *   [ ] **4. Analizar Datos:** Recorrer los datos recibidos y compararlos con umbrales predefinidos (ej. `if temperature > 90.0`).
-    *   [ ] **5. Generar Alertas:** Si una condición se cumple, imprimir un mensaje de alerta claro en la consola.
-    *   [ ] **6. Espera Asíncrona:** Usar `await asyncio.sleep()` para pausar entre cada ciclo de consulta.
+3. Activar entorno virtual:
+   source venv/bin/activate
 
----
-Este README.md proporciona una guía clara y centralizada. Asegúrate de que todos los miembros del equipo lo lean y estén de acuerdo antes de comenzar a codificar.
+4. Instalar dependencias:
+   pip install aiohttp
+   pip install pydantic
+
+5. Ejecutar el cliente de consulta:
+   python query_client.py
+
+   *Se mostrarán las últimas lecturas y saltarán alertas si los valores
+    se salen de los rangos definidos.
+   *Dejar terminal abierta.
+
+-------------------------------------------------------------------
+Paso Final: Cómo Detener Todo el Sistema
+-------------------------------------------------------------------
+
+Ir a cada una de las cuatro terminales abiertas y presionar Ctrl + C
+
+*Esto cerrará cada módulo de forma segura.
