@@ -1,137 +1,111 @@
+README hecho por nosotros, IA fue usada para estilizar el markdown (Gemini 2.5 Pro) 
+
 ===================================================================
                 INSTRUCCIONES DE EJECUCIÓN DEL PROYECTO
 ===================================================================
+-------------------------------------------------------------------
 Paso 0: Requisitos Previos
 -------------------------------------------------------------------
 
-1. Instalar Git
-2. Instalar Python 3.8 o superior
-3. Instalar un compilador de C++ (g++ es estándar en Linux).
-4. Instalar las librerías de desarrollo de OpenSSL.
-   - En Debian/Ubuntu: sudo apt-get install libssl-dev
 
-   *Librerías necesarias para Cliente Sensor.
+* **Git**
+* **Python 3.8+**
+* **Compilador de C++ (g++ es estándar en Linux)**.
+* **Librerías de desarrollo de OpenSSL**.
+   - En Debian/Ubuntu: `sudo apt-get install libssl-dev`
+
 -------------------------------------------------------------------
 Paso 1: Clonar el Repositorio
 -------------------------------------------------------------------
 
-Abrir una terminal y ejecuta los siguientes comandos:
+Se abre una terminal y se ejecutan los siguientes comandos:
 
+```bash
 git clone https://github.com/JavierKDGN/ProyectoRedes.git
+cd ProyectoRedes
+```
 
 -------------------------------------------------------------------
-Paso 2: Ejecutar Módulo 3 (Servidor Final - FastAPI)
+Paso 2: Preparacion de entorno
 -------------------------------------------------------------------
+En la terminal creamos y activamos un entorno virtual para los componentes con Python:
+```bash
+    python -m venv .venv
+    # En Linux
+    source .venv/bin/activate
+```
 
-En una Terminal:
+Luego se instalan todas las dependencias de Python
+* Usando el archivo `requirements.txt` que agrupa lo necesario
+```bash
+pip install -r requirements.txt
+```
 
-1. Navegar a la carpeta del servidor final:
-   cd ~/ProyectoRedes/final_server/
-
-2. Crear entorno virtual:
-   python -m venv venv
-
-3. Activar entorno virtual:
-   source venv/bin/activate
-
-4. Instalar dependencias:
-
-	pip install "fastapi[all]"
-
-	pip install sqlalchemy
-
-	pip install pandas
-
-5. Ejecutar el servidor FastAPI:
-   uvicorn app.final_server:app --reload
-
-   *Mostrará que está corriendo en http://127.0.0.1:8000.
-   *Dejar terminal abierta.
+Por ultimo se compila el cliente sensor de C++:
+```bash
+cd client_sensor/
+g++ main.cpp -o sensor_client -lssl -lcrypto
+``` 
 
 -------------------------------------------------------------------
-Paso 3: Ejecutar Módulo 2 (Servidor Intermedio)
+Paso 3: Ejecucion del sistema
 -------------------------------------------------------------------
 
-En una segunda Terminal:
+Para que todo funcione, se deben ejecutar todos los componentes en el orden correcto. **Se necesitaran 4 terminales separadas**, y tener activado el entorno virtual del paso 2 (`source .venv/bin/activate`).
 
-1. Navegar a la carpeta del servidor intermedio:
-   cd ~/ProyectoRedes/intermediate_server/
+#### **Terminal 1: Iniciar la API (Python/FastAPI)**
+*Debe ejecutarse primero, porque es el destino final de los datos.*
 
-2. Crear entorno virtual:
-   python3 -m venv venv
+```bash
+cd final_server/
+# uvicorn viene con FastAPI y ayuda a correr la documentacion
+uvicorn app.main:app --reload
+```
+> Indicara que el servidor esta corriendo en `http://127.0.0.1:8000`.
 
-3. Activar entorno virtual:
-   source venv/bin/activate
+---
 
-4. Instalar dependencias:
+#### **Terminal 2: Servidor intermedio (Python)**
+*Escucha al sensor y reenvia los datos a la API*
 
-   	pip install requests
+```bash
+cd intermediate_server/
+python intermediate_server.py
+```
+> Indicara que el servidor está escuchando en el puerto `8080`.
 
-	pip install pymodbus
+---
 
-5. Ejecutar el servidor:
-   python3 intermediate_server.py
+#### **Terminal 3: Iniciar el Cliente Sensor (C++)**
+*Este componente simula el sensor y comenzará a enviar datos.*
 
-   *Mostrará que está escuchando en el puerto 8080 y 502.
-   *Dejar terminal abierta.
+```bash
+cd client_sensor/
+./sensor_client
+```
+> 🖥️ Verás mensajes de "Paquete enviado exitosamente" cada 5 segundos.
 
--------------------------------------------------------------------
-Paso 4: Ejecutar Módulo 1 (Cliente Sensor - C++)
--------------------------------------------------------------------
+---
 
-En una tercera Terminal:
+#### **Terminal 4 (Opcional): Cliente de Consulta**
+*Este cliente monitorea los datos y muestra alertas.*
 
-1. Navegar a la carpeta del cliente:
-   cd ~/ProyectoRedes/client_sensor/
+```bash
+cd query_client/
+python query_client.py
+```
+> Recibira lecturas de datos y alertara si algún valor excede los límites predefinidos.
 
-2. Compilar el código para crear el programa:
-   g++ main.cpp -o sensor_client -lssl -lcrypto
+## Verificación y Resultados
 
-3. Ejecutar el cliente:
-   ./sensor_client
+1.  **Dashboard Web**: Abre el navegador y ve a **[http://127.0.0.1:8000](http://127.0.0.1:8000)**.
+2.  **Filtrar Datos**: Haz clic en "Aplicar Filtros", mostrara los datos de todos los sensores.
 
-   *Mostrará cómo se envían paquetes de datos cada 5 segundos.
-   *Dejar terminal abierta.
+3. **Mostrara en tiempo real**:
+    *   Un gráfico con la humedad.
+    *   Estadísticas de los datos recibidos.
+    *   Una tabla con las últimas lecturas.
 
--------------------------------------------------------------------
-Paso 5: Ver Resultados
--------------------------------------------------------------------
-
-Página Web:
-
-1. Abrir navegador e ingresar a: http://127.0.0.1:8000
-
-2. En el campo "ID Sensor", escribir '101' y presionar "Aplicar Filtros".
-   
-   *Se mostrarán las gráficas, estadísticas y lecturas recientes en tiempo real.
-
--------------------------------------------------------------------
-Paso 6: Ejecutar Módulo 4 (Cliente de Consulta de Alertas)
--------------------------------------------------------------------
-
-En una cuarta Terminal:
-
-1. Navegar a la carpeta del cliente de consulta:
-   cd ~/ProyectoRedes/query_client/
-
-2. Crear entorno virtual:
-   python3 -m venv venv
-
-3. Activar entorno virtual:
-   source venv/bin/activate
-
-4. Instalar dependencias:
-   	
-	pip install aiohttp
-   	
-	pip install pydantic
-
-5. Ejecutar el cliente de consulta:
-   python query_client.py
-
-   *Se mostrarán las últimas lecturas y saltarán alertas si los valores
-    se salen de los rangos definidos.
-   *Dejar terminal abierta.
 
 -------------------------------------------------------------------
 Paso Final: Cómo Detener Todo el Sistema
@@ -139,4 +113,23 @@ Paso Final: Cómo Detener Todo el Sistema
 
 Ir a cada una de las cuatro terminales abiertas y presionar Ctrl + C
 
-*Esto cerrará cada módulo de forma segura.
+*Esto cerrará cada módulo de forma segura.*
+
+
+## Estructura del Proyecto
+```
+proyecto_final/
+├── .venv/                  # Entorno virtual de Python
+├── client_sensor/          # Módulo 1: Cliente C++ que simula el sensor
+├── final_server/           # Módulo 3: Servidor FastAPI, base de datos y dashboard
+├── intermediate_server/    # Módulo 2: Servidor Python que actúa como gateway
+├── query_client/           # Módulo 4: Cliente Python para monitoreo y alertas
+└── requirements.txt        # Archivo con todas las dependencias de Python
+```
+
+---
+### Autores
+*   Javier Cadagan
+*   Mariel Muñoz
+*   Jhostian San Martin
+

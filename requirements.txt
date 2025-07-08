@@ -1,0 +1,12 @@
+# Dependencias del Servidor Final
+fastapi[all]
+sqlalchemy
+pandas
+
+# Dependencias del Servidor Intermedio
+requests
+pymodbus
+
+# Dependencias del Cliente de Consulta
+aiohttp
+pydantic
