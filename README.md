@@ -60,7 +60,7 @@ Para que todo funcione, se deben ejecutar todos los componentes en el orden corr
 ```bash
 cd final_server/
 # uvicorn viene con FastAPI y ayuda a correr la documentacion
-uvicorn app.main:app --reload
+uvicorn app.final_server:app --reload
 ```
 > Indicara que el servidor esta corriendo en `http://127.0.0.1:8000`.
 
