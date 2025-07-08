@@ -1,8 +1,9 @@
 README hecho por nosotros, IA fue usada para estilizar el markdown (Gemini 2.5 Pro) 
 
-===================================================================
-                INSTRUCCIONES DE EJECUCIÓN DEL PROYECTO
-===================================================================
+
+
+# INSTRUCCIONES DE EJECUCIÓN DEL PROYECTO
+
 -------------------------------------------------------------------
 Paso 0: Requisitos Previos
 -------------------------------------------------------------------
